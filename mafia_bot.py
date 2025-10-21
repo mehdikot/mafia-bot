@@ -14,7 +14,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix=".", intents=intents)
 
 games = {}  # ذخیره بازی‌ها بر اساس guild_id
 
@@ -44,7 +44,7 @@ async def cg(ctx):
         "votes": {}
     }
     games[ctx.guild.id] = game
-    await ctx.send(f"بازی جدید ساخته شد! گاد: {ctx.author.mention}\nبرای پیوستن: `!join`")
+    await ctx.send(f"بازی جدید ساخته شد! گاد: {ctx.author.mention}\nبرای پیوستن: `.join`")
 
 @bot.command()
 async def eg(ctx):
@@ -209,7 +209,7 @@ async def sg(ctx):
         except:
             await ctx.send(f"⚠️ نتونستم نقش رو به {player.mention} بفرستم.")
 
-    await ctx.send("بازی شروع شد! 🌙 شب آغاز شد...\nگاد با `!next` فاز بعدی رو شروع کنه.")
+    await ctx.send("بازی شروع شد! 🌙 شب آغاز شد...\nگاد با `.next` فاز بعدی رو شروع کنه.")
 
 @bot.command()
 async def sgb(ctx):
@@ -236,7 +236,7 @@ async def sgb(ctx):
         except:
             await ctx.send(f"⚠️ نتونستم نقش رو به {player.mention} بفرستم.")
 
-    await ctx.send("بازی شروع شد! 🌙 شب آغاز شد...\nگاد با `!next` فاز بعدی رو شروع کنه.")
+    await ctx.send("بازی شروع شد! 🌙 شب آغاز شد...\nگاد با `.next` فاز بعدی رو شروع کنه.")
 
 @bot.command()
 async def sgbt(ctx):
@@ -283,7 +283,7 @@ async def sgc(ctx):
         except:
             await ctx.send(f"⚠️ نتونستم نقش رو به {player.mention} بفرستم.")
 
-    await ctx.send("بازی شروع شد! 🌙 شب آغاز شد...\nگاد با `!next` فаз بعدی رو شروع کنه.")
+    await ctx.send("بازی شروع شد! 🌙 شب آغاز شد...\nگاد با `.next` فاز بعدی رو شروع کنه.")
 
 @bot.command()
 async def d(ctx):
@@ -298,7 +298,7 @@ async def d(ctx):
     elif game["status"] == "day":
         game["status"] = "voting"
         game["votes"] = {}
-        await ctx.send("زمان رأی‌گیری! `!vote @user`")
+        await ctx.send("زمان رأی‌گیری! `.vote @user`")
     elif game["status"] == "voting":
         votes = game["votes"]
         if not votes:
@@ -323,7 +323,7 @@ async def d(ctx):
 
 @bot.command()
 async def n(ctx):
-    """تغییر به فاز شب"""
+    """تغییر به فаз شب"""
     game = games.get(ctx.guild.id)
     if not game or ctx.author != game["god"]:
         await ctx.send("فقط گاد می‌تونه فاز رو عوض کنه!")
@@ -426,7 +426,7 @@ async def v(ctx, target: discord.Member = None, number: int = None, name: str = 
         if not found:
             await ctx.send("پلیری با این نام یافت نشد!")
     else:
-        await ctx.send("فرمت نامعتبر! استفاده کن: `!v @user` یا `!v 1` یا `!v example`")
+        await ctx.send("فرمت نامعتبر! استفاده کن: `.v @user` یا `.v 1` یا `.v example`")
 
 @bot.command()
 async def bazporsi(ctx, num1: int, num2: int):
@@ -482,7 +482,7 @@ async def kill(ctx, target: discord.Member = None, number: int = None, name: str
         if not found:
             await ctx.send("پلیری با این نام یافت نشد!")
     else:
-        await ctx.send("فرمت نامعتبر! استفاده کن: `!kill @user` یا `!kill 1` یا `!kill example`")
+        await ctx.send("فرmat نامعتبر! استفاده کن: `.kill @user` یا `.kill 1` یا `.kill example`")
 
 @bot.command()
 async def revive(ctx, target: discord.Member = None, number: int = None, name: str = None):
@@ -511,7 +511,7 @@ async def revive(ctx, target: discord.Member = None, number: int = None, name: s
         if not found:
             await ctx.send("پلیری با این نام یافت نشد!")
     else:
-        await ctx.send("فرمت نامعتبر! استفاده کن: `!revive @user` یا `!revive 1` یا `!revive example`")
+        await ctx.send("فرmat نامعتبر! استفاده کن: `.revive @user` یا `.revive 1` یا `.revive example`")
 
 @bot.command()
 async def td(ctx, target: discord.Member = None, number: int = None, name: str = None):
@@ -537,7 +537,7 @@ async def td(ctx, target: discord.Member = None, number: int = None, name: str =
         if not found:
             await ctx.send("پلیری با این نام یافت نشد!")
     else:
-        await ctx.send("فرمت نامعتبر! استفاده کن: `!td @user` یا `!td 1` یا `!td example`")
+        await ctx.send("فرmat نامعتبر! استفاده کن: `.td @user` یا `.td 1` یا `.td example`")
 
 @bot.command()
 async def tt(ctx, target: discord.Member = None, number: int = None, name: str = None):
@@ -563,7 +563,7 @@ async def tt(ctx, target: discord.Member = None, number: int = None, name: str =
         if not found:
             await ctx.send("پلیری با این نام یافت نشد!")
     else:
-        await ctx.send("فرمت نامعتبر! استفاده کن: `!tt @user` یا `!tt 1` یا `!tt example`")
+        await ctx.send("فرmat نامعتبر! استفاده کن: `.tt @user` یا `.tt 1` یا `.tt example`")
 
 @bot.command()
 async def tc(ctx, target: discord.Member = None, number: int = None, name: str = None):
@@ -589,13 +589,13 @@ async def tc(ctx, target: discord.Member = None, number: int = None, name: str =
         if not found:
             await ctx.send("پلیری با این نام یافت نشد!")
     else:
-        await ctx.send("فرمت نامعتبر! استفاده کن: `!tc @user` یا `!tc 1` یا `!tc example`")
+        await ctx.send("فرmat نامعتبر! استفاده کن: `.tc @user` یا `.tc 1` یا `.tc example`")
 
 @bot.command()
 async def t(ctx, time_str: str = None):
     """تایمر با زمان دلخواه"""
     if not time_str:
-        await ctx.send("زمان را وارد کن! مثال: `!t 100` یا `!t 5m` یا `!t 1h`")
+        await ctx.send("زمان را وارد کن! مثال: `.t 100` یا `.t 5m` یا `.t 1h`")
         return
     try:
         # پارس کردن زمان
@@ -814,7 +814,7 @@ async def nick(ctx, *, new_nick: str = None):
         except:
             await ctx.send("❌ نمی‌تونم نیک شما رو عوض کنم!")
     else:
-        await ctx.send("📌 استفاده کن: `!nick example`")
+        await ctx.send("📌 استفاده کن: `.nick example`")
 
 @bot.command()
 async def dcme(ctx, duration: str):
