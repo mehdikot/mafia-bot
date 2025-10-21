@@ -209,7 +209,7 @@ async def sg(ctx):
         except:
             await ctx.send(f"⚠️ نتونستم نقش رو به {player.mention} بفرستم.")
 
-    await ctx.send("بازی شروع شد! 🌙 شب آغاز شد...\nگاد با `.next` فاز بعدی رو شروع کنه.")
+    await ctx.send("بازی شروع شد! 🌙 شب آغاز شد...\nگاد با `.next` فаз بعدی رو شروع کنه.")
 
 @bot.command()
 async def sgb(ctx):
@@ -323,7 +323,7 @@ async def d(ctx):
 
 @bot.command()
 async def n(ctx):
-    """تغییر به فаз شب"""
+    """تغییر به فاز شب"""
     game = games.get(ctx.guild.id)
     if not game or ctx.author != game["god"]:
         await ctx.send("فقط گاد می‌تونه فاز رو عوض کنه!")
@@ -665,7 +665,7 @@ async def show(ctx):
     await ctx.send("✅ نام‌های پلیرها به نقش‌شان تغییر کرد!")
 
 @bot.command()
-async def return(ctx):
+async def reset_nick(ctx):
     """برگرداندن اسم ها بعد از دستور show"""
     game = games.get(ctx.guild.id)
     if not game:
