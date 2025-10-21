@@ -1,27 +1,11 @@
-import os
-
-# تست مستقیم متغیر محیطی
-token = os.getenv("DISCORD_TOKEN")
-
-if token is None:
-    print("❌ خطا: DISCORD_TOKEN پیدا نشد!")
-    print("لیست تمام متغیرهای محیطی:")
-    for key in sorted(os.environ.keys()):
-        if "TOKEN" in key or "DISCORD" in key:
-            print(f"  - {key} = {os.environ[key]}")
-        else:
-            print(f"  - {key} = [hidden]")
-    exit(1)
-else:
-    print("✅ DISCORD_TOKEN پیدا شد! طول توکن:", len(token))
-    # اگر طول توکن کمتر از 50 بود، احتمالاً ناقصه
-    if len(token) < 50:
-        print("⚠️ هشدار: توکن خیلی کوتاهه! مطمئن شو کامل کپی شده.")
-
-# اگر همه چیز اوکی بود، ربات واقعی رو اجرا کن
 import discord
 from discord.ext import commands
-import random
+import os
+
+# بررسی وجود توکن
+TOKEN = os.getenv("DISCORD_TOKEN")
+if not TOKEN:
+    raise RuntimeError("❌ متغیر DISCORD_TOKEN پیدا نشد!")
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -31,10 +15,19 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"🎉 ربات {bot.user} آنلاین شد!")
+    print(f"✅ ربات {bot.user} آنلاین شد!")
+    await bot.change_presence(activity=discord.Game(name="!test"))
 
 @bot.command()
 async def test(ctx):
-    await ctx.send("ربات کار می‌کنه!")
+    await ctx.send("🎉 ربات کار می‌کنه! دستورات رو می‌بینه.")
 
-bot.run(token)
+@bot.command()
+async def help(ctx):
+    await ctx.send("""
+**دستورات تستی:**
+- `!test` — تست کارکرد
+- `!help` — راهنمایی
+""")
+
+bot.run(TOKEN)
