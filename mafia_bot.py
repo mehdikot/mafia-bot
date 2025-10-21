@@ -800,7 +800,7 @@ async def premium(ctx):
     await ctx.send("💎 وضعیت پرمیوم: (نمونه)")
 
 @bot.command()
-async def premium(ctx, promo_code: str):
+async def promo(ctx, promo_code: str):
     """استفاده از پروموکد هدیه"""
     await ctx.send(f"🎁 پروموکد `{promo_code}` دریافت شد! (نمونه)")
 
