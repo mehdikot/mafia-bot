@@ -1,4 +1,4 @@
-# mafia_bot.py
+# mafia_farsi_bot.py
 import os
 import discord
 from discord.ext import commands
@@ -7,12 +7,65 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 INTENTS = discord.Intents.default()
 INTENTS.message_content = True
 INTENTS.guilds = True
+INTENTS.members = True
 
 bot = commands.Bot(command_prefix=".", intents=INTENTS)
 
-# لینک‌های تصویر شب و روز (جایگزین کن با لینک‌های خودت)
-NIGHT_IMAGE_URL = "https://example.com/night.png"
-DAY_IMAGE_URL = "https://example.com/day.png"
+# لینک‌های تصویر شب و روز
+NIGHT_IMAGE_URL = "https://s6.uupload.ir/files/night_25.jpg"
+DAY_IMAGE_URL = "https://s6.uupload.ir/files/day_ho71.jpg"
+
+# وضعیت بازی‌ها در کانال‌ها
+GAMES = {}  # channel_id -> {players: set, god_id: int}
+
+# دستور ساخت بازی
+@bot.command(name="بازی")
+async def create_game(ctx):
+    GAMES[ctx.channel.id] = {"players": set(), "god_id": ctx.author.id}
+    await ctx.send(f"🎮 بازی جدید ساخته شد.\n👑 گاد: <@{ctx.author.id}>\nبرای ورود از دستور `.اد` استفاده کنید.")
+
+# دستور ورود بازیکن
+@bot.command(name="اد")
+async def join_game(ctx):
+    game = GAMES.get(ctx.channel.id)
+    if not game:
+        await ctx.send("❌ هنوز بازی‌ای ساخته نشده. از `.بازی` استفاده کن.")
+        return
+    game["players"].add(ctx.author.id)
+    await ctx.send(f"✅ <@{ctx.author.id}> وارد بازی شد. تعداد بازیکنان: {len(game['players'])}")
+
+# دستور تعیین گاد توسط خودش
+@bot.command(name="گاد")
+async def set_god(ctx):
+    game = GAMES.get(ctx.channel.id)
+    if not game:
+        await ctx.send("❌ بازی‌ای فعال نیست.")
+        return
+    game["god_id"] = ctx.author.id
+    await ctx.send(f"👑 <@{ctx.author.id}> حالا گاد بازیه.")
+
+# دستور تعیین گاد برای دیگران
+@bot.command(name="گاد_تعیین")
+async def assign_god(ctx, member: discord.Member):
+    game = GAMES.get(ctx.channel.id)
+    if not game:
+        await ctx.send("❌ بازی‌ای فعال نیست.")
+        return
+    if ctx.author.id != game["god_id"]:
+        await ctx.send("🚫 فقط گاد فعلی می‌تونه گاد جدید تعیین کنه.")
+        return
+    game["god_id"] = member.id
+    await ctx.send(f"👑 <@{member.id}> حالا گاد بازیه.")
+
+# دستور وضعیت بازی
+@bot.command(name="وضعیت")
+async def game_status(ctx):
+    game = GAMES.get(ctx.channel.id)
+    if not game:
+        await ctx.send("❌ بازی‌ای فعال نیست.")
+        return
+    players = ", ".join([f"<@{uid}>" for uid in game["players"]]) or "—"
+    await ctx.send(f"📊 وضعیت بازی:\n👑 گاد: <@{game['god_id']}>\n🧑‍🤝‍🧑 بازیکنان: {players}")
 
 # دستور شب
 @bot.command(name="شب")
@@ -38,25 +91,10 @@ async def send_day(ctx):
     embed.set_footer(text="🌇 بیداری و هیاهوی شهر")
     await ctx.send(embed=embed)
 
-# نمونه دستور شروع بازی با پیشوند .
-@bot.command(name="ng")
-async def new_game(ctx):
-    await ctx.send("🎮 بازی جدید ساخته شد. با دستور `.j` وارد شوید.")
-
-# دستور ورود به بازی
-@bot.command(name="j")
-async def join_game(ctx):
-    await ctx.send(f"✅ <@{ctx.author.id}> وارد بازی شد.")
-
-# دستور وضعیت
-@bot.command(name="st")
-async def status(ctx):
-    await ctx.send("📊 وضعیت فعلی بازی: در حال آماده‌سازی...")
-
 # راه‌اندازی بات
 @bot.event
 async def on_ready():
-    print(f"✅ Logged in as {bot.user.name}")
-    print("📌 دستورات فعال: .شب .روز .ng .j .st")
+    print(f"✅ بات فعال شد: {bot.user.name}")
+    print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
