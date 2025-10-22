@@ -18,6 +18,38 @@ DAY_IMAGE_URL = "https://s6.uupload.ir/files/day_ho71.jpg"
 # وضعیت بازی‌ها در کانال‌ها
 GAMES = {}  # channel_id -> {players: set, god_id: int}
 
+# سناریوهای قابل انتخاب توسط گاد
+SCENARIOS = {
+    "بازپرس": {
+        "players": 10,
+        "roles": [
+            "مافیا", "گادفادر", "دکتر", "کارآگاه", "شهروند",
+            "شهروند", "روان‌پزشک", "ساپورتر", "نماینده", "شهروند"
+        ]
+    },
+    "کاپو": {
+        "players": 12,
+        "roles": [
+            "کاپو", "مافیا", "مافیا", "دکتر", "کارآگاه",
+            "شهروند", "شهروند", "روان‌پزشک", "قمارباز", "نماینده", "شهروند", "شهروند"
+        ]
+    },
+    "مذاکره": {
+        "players": 13,
+        "roles": [
+            "مافیا", "مافیا", "گادفادر", "دکتر", "کارآگاه",
+            "نماینده", "شهروند", "شهروند", "روان‌پزشک", "ساپورتر", "قمارباز", "دهکده‌دار", "شهروند"
+        ]
+    },
+    "نماینده": {
+        "players": 10,
+        "roles": [
+            "نماینده", "مافیا", "گادفادر", "دکتر", "کارآگاه",
+            "شهروند", "شهروند", "روان‌پزشک", "ساپورتر", "شهروند"
+        ]
+    }
+}
+
 # دستور ساخت بازی
 @bot.command(name="بازی")
 async def create_game(ctx):
@@ -90,6 +122,58 @@ async def send_day(ctx):
     embed.set_image(url=DAY_IMAGE_URL)
     embed.set_footer(text="🌇 بیداری و هیاهوی شهر")
     await ctx.send(embed=embed)
+
+# دستور شروع رسمی بازی با انتخاب سناریو
+@bot.command(name="sg")
+async def start_game(ctx):
+    game = GAMES.get(ctx.channel.id)
+    if not game:
+        await ctx.send("❌ هنوز بازی‌ای ساخته نشده. از `.بازی` استفاده کن.")
+        return
+    if ctx.author.id != game["god_id"]:
+        await ctx.send("🚫 فقط گاد می‌تونه بازی رو ران کنه.")
+        return
+
+    class ScenarioView(discord.ui.View):
+        def __init__(self):
+            super().__init__(timeout=None)
+            for name in SCENARIOS.keys():
+                self.add_item(discord.ui.Button(label=name, style=discord.ButtonStyle.primary, custom_id=f"scenario_{name}"))
+
+        @discord.ui.button(label="لغو", style=discord.ButtonStyle.danger, custom_id="cancel")
+        async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+            await interaction.response.edit_message(content="❌ انتخاب سناریو لغو شد.", view=None)
+
+    embed = discord.Embed(
+        title="📢 شروع رسمی بازی",
+        description=f"🎮 بازی قراره ران بشه!\n👑 گاد: <@{ctx.author.id}>\n\nلطفاً یکی از سناریوهای زیر رو انتخاب کن:",
+        color=discord.Color.green()
+    )
+    await ctx.send(embed=embed, view=ScenarioView())
+
+# هندل انتخاب سناریو با دکمه
+@bot.event
+async def on_interaction(interaction: discord.Interaction):
+    cid = interaction.channel.id
+    game = GAMES.get(cid)
+    if not game or interaction.user.id != game["god_id"]:
+        await interaction.response.send_message("🚫 فقط گاد می‌تونه سناریو انتخاب کنه.", ephemeral=True)
+        return
+
+    if interaction.data["custom_id"].startswith("scenario_"):
+        scenario_name = interaction.data["custom_id"].split("_")[1]
+        scenario = SCENARIOS.get(scenario_name)
+        if not scenario:
+            await interaction.response.send_message("❌ سناریو یافت نشد.", ephemeral=True)
+            return
+
+        roles_text = "\n".join([f"• {r}" for r in scenario["roles"]])
+        embed = discord.Embed(
+            title=f"✅ سناریو انتخاب شد: {scenario_name}",
+            description=f"👥 تعداد بازیکنان: {scenario['players']}\n🎭 نقش‌ها:\n{roles_text}",
+            color=discord.Color.blue()
+        )
+        await interaction.response.edit_message(embed=embed, view=None)
 
 # راه‌اندازی بات
 @bot.event
