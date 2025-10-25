@@ -118,6 +118,23 @@ async def send_day(ctx):
     embed.set_footer(text="🌇 بیداری و هیاهوی شهر")
     await ctx.send(embed=embed)
 
+
+
+
+
+
+
+
+
+
+import random
+import discord
+from discord.ext import commands
+
+# فرض: GAMES و SCENARIOS قبلاً تعریف شده‌اند
+# GAMES[channel_id] = {"god_id": ..., "players": set([...]), "roles": {...}}
+# SCENARIOS = {"classic": {"roles": ["مافیا","مافیا","دکتر","کارآگاه"]}, ...}
+
 @bot.command(name="sg")
 async def start_game(ctx):
     game = GAMES.get(ctx.channel.id)
@@ -129,11 +146,85 @@ async def start_game(ctx):
         def __init__(self):
             super().__init__(timeout=None)
             for name in SCENARIOS.keys():
-                self.add_item(discord.ui.Button(label=name, style=discord.ButtonStyle.primary, custom_id=f"scenario_{name}"))
+                self.add_item(
+                    discord.ui.Button(
+                        label=name,
+                        style=discord.ButtonStyle.primary,
+                        custom_id=f"scenario_{name}"
+                    )
+                )
 
         @discord.ui.button(label="لغو", style=discord.ButtonStyle.danger, custom_id="cancel")
         async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
             await interaction.response.edit_message(content="❌ انتخاب سناریو لغو شد.", view=None)
+
+    embed = discord.Embed(
+        title="📢 شروع رسمی بازی",
+        description=f"🎮 بازی قراره ران بشه!\n👑 گاد: <@{ctx.author.id}>\n\nلطفاً یکی از سناریوهای زیر رو انتخاب کن:",
+        color=discord.Color.green()
+    )
+    await ctx.send(embed=embed, view=ScenarioView())
+
+
+@bot.event
+async def on_interaction(interaction: discord.Interaction):
+    cid = interaction.channel.id
+    game = GAMES.get(cid)
+    if not game or interaction.user.id != game["god_id"]:
+        await interaction.response.send_message("🚫 فقط گاد می‌تونه سناریو انتخاب کنه.", ephemeral=True)
+        return
+
+    custom_id = interaction.data.get("custom_id", "")
+    if custom_id.startswith("scenario_"):
+        scenario_name = custom_id.split("_", 1)[1]
+        scenario = SCENARIOS.get(scenario_name)
+        if not scenario:
+            await interaction.response.send_message("❌ سناریو یافت نشد.", ephemeral=True)
+            return
+
+        # تقسیم نقش‌ها
+        players = list(game["players"])
+        roles = scenario["roles"][:]
+        while len(roles) < len(players):
+            roles.append("شهروند")
+
+        random.shuffle(roles)
+
+        assignments = {}
+        for player_id, role in zip(players, roles):
+            member = interaction.guild.get_member(player_id)
+            assignments[player_id] = role
+            try:
+                await member.send(f"🎭 نقش شما در این بازی: **{role}**")
+            except:
+                await interaction.channel.send(f"⚠️ نتونستم نقش رو برای <@{player_id}> بفرستم (پی‌وی بسته است).")
+
+        game["roles"] = assignments
+
+        # ارسال لیست نقش‌ها برای گاد
+        god_member = interaction.guild.get_member(game["god_id"])
+        role_list = "\n".join(
+            [f"🔹 {interaction.guild.get_member(pid).display_name} → {role}" for pid, role in assignments.items()]
+        )
+        try:
+            await god_member.send(f"📋 لیست نقش‌ها برای این بازی:\n\n{role_list}")
+        except:
+            await interaction.channel.send("⚠️ نتونستم لیست نقش‌ها رو برای گاد بفرستم (پی‌وی بسته است).")
+
+        await interaction.response.edit_message(
+            content=f"✅ سناریو **{scenario_name}** انتخاب شد و نقش‌ها تقسیم شدند.",
+            view=None
+        )
+
+
+
+
+
+
+
+
+
+    
 
     embed = discord.Embed(
         title="📢 شروع رسمی بازی",
@@ -408,6 +499,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
