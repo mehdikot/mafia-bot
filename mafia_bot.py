@@ -111,14 +111,7 @@ async def send_day(ctx):
 
 
 
-import random
-import discord
-from discord.ext import commands
 
-# دیتای بازی‌ها
-GAMES = {}
-
-# سناریوها
 SCENARIOS = {
     "کاپو": {
         "10": [
@@ -161,90 +154,60 @@ SCENARIOS = {
             "دکتر", "کارآگاه", "محقق", "بازپرس", "رویین‌تن", "شهروند ساده", "شهروند ساده", "اسنایپر", "شهروند ساده",
             "دن مافیا", "ناتو", "شیاد", "مافیا ساده"
         ]
+    },
+    "مذاکره": {
+        "10": [
+            "مافیا", "مافیا", "گادفادر", "دکتر", "کارآگاه",
+            "نماینده", "شهروند", "شهروند", "روان‌پزشک", "ساپورتر"
+        ],
+        "12": [
+            "مافیا", "مافیا", "گادفادر", "دکتر", "کارآگاه",
+            "نماینده", "شهروند", "شهروند", "روان‌پزشک", "ساپورتر", "قمارباز", "دهکده‌دار"
+        ],
+        "13": [
+            "مافیا", "مافیا", "گادفادر", "دکتر", "کارآگاه",
+            "نماینده", "شهروند", "شهروند", "روان‌پزشک", "ساپورتر", "قمارباز", "دهکده‌دار", "شهروند"
+        ]
+    },
+    "نماینده": {
+        "10": [
+            "نماینده", "مافیا", "گادفادر", "دکتر", "کارآگاه",
+            "شهروند", "شهروند", "روان‌پزشک", "ساپورتر", "شهروند"
+        ],
+        "12": [
+            "نماینده", "مافیا", "گادفادر", "دکتر", "کارآگاه",
+            "شهروند", "شهروند", "روان‌پزشک", "ساپورتر", "شهروند", "قمارباز", "دهکده‌دار"
+        ],
+        "13": [
+            "نماینده", "مافیا", "گادفادر", "دکتر", "کارآگاه",
+            "شهروند", "شهروند", "روان‌پزشک", "ساپورتر", "شهروند", "قمارباز", "دهکده‌دار"
+        ]
     }
 }
 
-# دستور شروع بازی
-@bot.command(name="sg")
-async def start_game(ctx):
-    game = GAMES.get(ctx.channel.id)
-    if not game or ctx.author.id != game["god_id"]:
-        await ctx.send("🚫 فقط گاد می‌تونه بازی رو ران کنه.")
-        return
-
-    class ScenarioView(discord.ui.View):
-        def __init__(self):
-            super().__init__(timeout=None)
-            for name in SCENARIOS.keys():
-                self.add_item(
-                    discord.ui.Button(
-                        label=name,
-                        style=discord.ButtonStyle.primary,
-                        custom_id=f"scenario_{name}"
-                    )
-                )
-
-        @discord.ui.button(label="لغو", style=discord.ButtonStyle.danger, custom_id="cancel")
-        async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-            await interaction.response.edit_message(content="❌ انتخاب سناریو لغو شد.", view=None)
-
-    embed = discord.Embed(
-        title="📢 شروع رسمی بازی",
-        description=f"🎮 بازی قراره ران بشه!\n👑 گاد: <@{ctx.author.id}>\n\nلطفاً یکی از سناریوهای زیر رو انتخاب کن:",
-        color=discord.Color.green()
-    )
-    await ctx.send(embed=embed, view=ScenarioView())
 
 
-# مدیریت انتخاب سناریو و تعداد بازیکنان
-@bot.event
-async def on_interaction(interaction: discord.Interaction):
-    cid = interaction.channel.id
-    game = GAMES.get(cid)
-    if not game or interaction.user.id != game["god_id"]:
-        await interaction.response.send_message("🚫 فقط گاد می‌تونه سناریو انتخاب کنه.", ephemeral=True)
-        return
 
-    custom_id = interaction.data.get("custom_id", "")
 
-    # مرحله اول: انتخاب سناریو
-    if custom_id.startswith("scenario_") and "_" not in custom_id[9:]:
-        scenario_name = custom_id.split("_", 1)[1]
-        scenario_versions = SCENARIOS.get(scenario_name)
-        if not scenario_versions:
-            await interaction.response.send_message("❌ سناریو یافت نشد.", ephemeral=True)
-            return
 
-        # ✅ پاسخ اولیه برای جلوگیری از خطا
-        await interaction.response.defer()
 
-        class PlayerCountView(discord.ui.View):
-            def __init__(self, scenario_name, options):
-                super().__init__(timeout=None)
-                for opt in options:
-                    self.add_item(
-                        discord.ui.Button(
-                            label=f"{scenario_name} - {opt} نفره",
-                            style=discord.ButtonStyle.primary,
-                            custom_id=f"scenario_{scenario_name}_{opt}"
-                        )
-                    )
 
-        await interaction.edit_original_response(
-            content=f"📋 سناریو **{scenario_name}** انتخاب شد. حالا تعداد بازیکنان رو انتخاب کن:",
-            view=PlayerCountView(scenario_name, scenario_versions.keys())
-        )
-        return
+class PlayerCountSelect(discord.ui.View):
+    def __init__(self, scenario_name, options):
+        super().__init__(timeout=None)
+        self.add_item(PlayerCountDropdown(scenario_name, options))
 
-    # مرحله دوم: انتخاب تعداد بازیکنان
-    if custom_id.startswith("scenario_") and "_" in custom_id[9:]:
-        _, scenario_name, count = custom_id.split("_", 2)
-        scenario_versions = SCENARIOS.get(scenario_name)
-        if not scenario_versions or count not in scenario_versions:
-            await interaction.response.send_message("❌ نسخه‌ی سناریو یافت نشد.", ephemeral=True)
-            return
+class PlayerCountDropdown(discord.ui.Select):
+    def __init__(self, scenario_name, options):
+        self.scenario_name = scenario_name
+        opts = [discord.SelectOption(label=f"{opt} نفره", value=opt) for opt in options]
+        super().__init__(placeholder="تعداد بازیکنان را انتخاب کن...", options=opts)
 
+    async def callback(self, interaction: discord.Interaction):
+        scenario_versions = SCENARIOS[self.scenario_name]
+        count = self.values[0]
         roles = scenario_versions[count]
+        game = GAMES.get(interaction.channel.id)
         players = list(game["players"])
 
         if len(players) != int(count):
@@ -253,9 +216,6 @@ async def on_interaction(interaction: discord.Interaction):
                 ephemeral=True
             )
             return
-
-        # ✅ پاسخ اولیه برای جلوگیری از خطا
-        await interaction.response.defer()
 
         random.shuffle(roles)
         assignments = {}
@@ -275,16 +235,36 @@ async def on_interaction(interaction: discord.Interaction):
             [f"🔹 {interaction.guild.get_member(pid).display_name} → {role}" for pid, role in assignments.items()]
         )
         try:
-            await god_member.send(f"📋 لیست نقش‌ها برای این بازی ({scenario_name} - {count} نفره):\n\n{role_list}")
+            await god_member.send(f"📋 لیست نقش‌ها برای این بازی ({self.scenario_name} - {count} نفره):\n\n{role_list}")
         except:
             await interaction.channel.send("⚠️ نتونستم لیست نقش‌ها رو برای گاد بفرستم (پی‌وی بسته است).")
 
-        await interaction.edit_original_response(
-            content=f"✅ سناریو **{scenario_name}** ({count} نفره) انتخاب شد و نقش‌ها تقسیم شدند.",
+        await interaction.response.edit_message(
+            content=f"✅ سناریو **{self.scenario_name}** ({count} نفره) انتخاب شد و نقش‌ها تقسیم شدند.",
             view=None
         )
 
 
+
+
+
+
+if custom_id.startswith("scenario_") and "_" not in custom_id[9:]:
+    scenario_name = custom_id.split("_", 1)[1]
+    scenario_versions = SCENARIOS.get(scenario_name)
+    if not scenario_versions:
+        await interaction.response.send_message("❌ سناریو یافت نشد.", ephemeral=True)
+        return
+
+    await interaction.response.edit_message(
+        content=f"📋 سناریو **{scenario_name}** انتخاب شد. حالا تعداد بازیکنان رو انتخاب کن:",
+        view=PlayerCountSelect(scenario_name, scenario_versions.keys())
+    )
+
+
+
+    
+    
 
 
 
@@ -530,6 +510,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
