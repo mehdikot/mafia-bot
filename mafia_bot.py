@@ -7,7 +7,6 @@ import os
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 
-
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
@@ -204,11 +203,11 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
         sequence.append(players[idx])
 
     votes = {uid: [] for uid in sequence}
-    await ctx.send(f"🗳️ رأی‌گیری نوع **{mode}** آغاز شد.\n⏳ هر بازیکن ۵ ثانیه فرصت داره رأی بده (با ارسال پیام مثل `.` یا هر چیز).")
+    await ctx.send(f"🗳️ رأی‌گیری نوع **{mode}** آغاز شد.\n⏳ هر بازیکن ۵ ثانیه فرصت داره رأی بده.")
 
     for i, target_id in enumerate(sequence, start=1):
         target_member = ctx.guild.get_member(target_id)
-        await ctx.send(f"\n🔢 شماره {i} → <@{target_id}>")
+        vote_msg = await ctx.send(f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: 0")
 
         def check(m):
             return (
@@ -223,26 +222,13 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
                 msg = await bot.wait_for("message", timeout=5.0, check=check)
                 if msg.author.id not in votes[target_id]:
                     votes[target_id].append(msg.author.id)
+                    await vote_msg.edit(content=f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: {len(votes[target_id])}")
         except asyncio.TimeoutError:
-            pass
+            pass  # پایان نوبت
 
-    result_lines = []
-    for i, uid in enumerate(sequence, start=1):
-        voter_list = ", ".join([f"<@{vid}>" for vid in votes[uid]]) or "هیچ‌کس"
-        result_lines.append(f"{i}. <@{uid}> → {len(votes[uid])} رأی | رأی‌دهندگان: {voter_list}")
+    game["votes"] = votes  # ذخیره رأی‌ها برای دستور .اعدام
 
-    embed = discord.Embed(
-        title="📊 نتیجه رأی‌گیری نوبتی",
-        description="\n".join(result_lines),
-        color=discord.Color.orange()
-    )
-    await ctx.send(embed=embed)
-
-
-
-
-
-
+    await ctx.send("✅ رأی‌گیری نوبتی به پایان رسید. برای اعدام از دستور `.اعدام` استفاده کن.")
 
 
 @bot.command(name="اعدام")
@@ -311,8 +297,6 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
-
-
 
 
 
