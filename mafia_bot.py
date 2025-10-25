@@ -131,6 +131,36 @@ async def on_interaction(interaction: discord.Interaction):
             view=None
         )
 
+
+
+@bot.command(name="fake")
+async def add_fake_players(ctx, count: int):
+    game = GAMES.get(ctx.channel.id)
+    if not game:
+        await ctx.send("❌ بازی‌ای فعال نیست.")
+        return
+
+    # فقط گاد اجازه داره بازیکن فیک اضافه کنه
+    if ctx.author.id != game["god_id"]:
+        await ctx.send("🚫 فقط گاد می‌تونه بازیکن فیک اضافه کنه.")
+        return
+
+    if count < 1 or count > 10:
+        await ctx.send("⚠️ فقط می‌تونی عددی بین 1 تا 10 وارد کنی.")
+        return
+
+    for i in range(count):
+        fake_id = -(len(game["players"]) + i + 1)  # آیدی منفی برای بازیکن فیک
+        game["players"].add(fake_id)
+
+    await ctx.send(f"👻 {count} بازیکن فیک اضافه شد. تعداد بازیکنان: {len(game['players'])}")
+
+
+
+
+
+
+
 # دستور تقسیم نقش‌ها
 @bot.command(name="sg")
 async def start_game(ctx):
@@ -172,4 +202,5 @@ async def start_game(ctx):
 
 # اجرای بات
 bot.run(TOKEN)
+
 
