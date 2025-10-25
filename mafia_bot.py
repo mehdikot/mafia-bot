@@ -238,18 +238,49 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
     game["votes"] = {}
 
     for i, target_id in enumerate(sequence, start=1):
-        msg = await ctx.send(f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: در حال شمارش...")
-        VOTE_SESSION[ctx.channel.id] = {
-            "target_id": target_id,
-            "voters": set(),
-            "message": msg
-        }
-        await asyncio.sleep(5)
-        voters = VOTE_SESSION[ctx.channel.id]["voters"]
-        game["votes"][target_id] = list(voters)
-        del VOTE_SESSION[ctx.channel.id]
+        target_member = ctx.guild.get_member(target_id)
+        vote_msg = await ctx.send(f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: در حال شمارش...")
+
+        collected_votes = []
+
+        def check(m):
+            return (
+                m.channel == ctx.channel and
+                m.author.id in game["players"] and
+                m.author.id != target_id and
+                m.content.strip() != "" and
+                m.created_at.timestamp() >= vote_msg.created_at.timestamp()
+            )
+
+        end_time = asyncio.get_event_loop().time() + 5
+        while True:
+            timeout = end_time - asyncio.get_event_loop().time()
+            if timeout <= 0:
+                break
+            try:
+                msg = await bot.wait_for("message", timeout=timeout, check=check)
+                if msg.author.id not in collected_votes:
+                    collected_votes.append(msg.author.id)
+            except asyncio.TimeoutError:
+                break
+
+        game["votes"][target_id] = collected_votes
+
+        # ساخت لیست رأی‌دهندگان با شماره
+        voter_lines = []
+        for idx, voter_id in enumerate(collected_votes, start=1):
+            voter_lines.append(f"{idx}. <@{voter_id}>")
+
+        result_text = f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: {len(collected_votes)}\n" + (
+            "\n".join(voter_lines) if voter_lines else "هیچ‌کس رأی نداد."
+        )
+
+        await vote_msg.edit(content=result_text)
 
     await ctx.send("✅ رأی‌گیری نوبتی به پایان رسید. برای اعدام از دستور `.اعدام` استفاده کن.")
+
+
+
 
 
 
@@ -330,6 +361,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
