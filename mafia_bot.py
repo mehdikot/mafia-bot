@@ -208,6 +208,7 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
         await ctx.send("⚠️ جهت باید `u` (بالا) یا `d` (پایین) باشه.")
         return
 
+    # ساخت ترتیب بازیکنان
     sequence = []
     idx = start - 1
     for _ in range(count):
@@ -219,6 +220,7 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
 
     game["votes"] = {}
 
+    # رأی‌گیری برای هر بازیکن
     for i, target_id in enumerate(sequence, start=1):
         target_member = ctx.guild.get_member(target_id)
         vote_msg = await ctx.send(f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: در حال شمارش...")
@@ -230,10 +232,10 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
                 m.channel == ctx.channel and
                 m.author.id in game["players"] and
                 m.author.id != target_id and
-                m.content.strip() != "" and
-                m.created_at.timestamp() >= vote_msg.created_at.timestamp()
+                m.content.strip() != ""
             )
 
+        # جمع‌آوری رأی‌ها در ۵ ثانیه
         end_time = asyncio.get_event_loop().time() + 5
         while True:
             timeout = end_time - asyncio.get_event_loop().time()
@@ -248,14 +250,12 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
 
         game["votes"][target_id] = collected_votes
 
-        # ساخت لیست رأی‌دهندگان با شماره
-        voter_lines = []
-        for idx, voter_id in enumerate(collected_votes, start=1):
-            voter_lines.append(f"{idx}. <@{voter_id}>")
-
-        result_text = f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: {len(collected_votes)}\n" + (
-            "\n".join(voter_lines) if voter_lines else "هیچ‌کس رأی نداد."
-        )
+        # ساخت متن نهایی برای ادیت پیام
+        if collected_votes:
+            voter_lines = [f"{idx}. <@{voter_id}>" for idx, voter_id in enumerate(collected_votes, start=1)]
+            result_text = f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: {len(collected_votes)}\n" + "\n".join(voter_lines)
+        else:
+            result_text = f"🔢 شماره {i} → <@{target_id}> | هیچ‌کس رأی نداد."
 
         await vote_msg.edit(content=result_text)
 
@@ -343,6 +343,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
