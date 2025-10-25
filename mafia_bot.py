@@ -206,7 +206,6 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
     await ctx.send(f"🗳️ رأی‌گیری نوع **{mode}** آغاز شد.\n⏳ هر بازیکن ۵ ثانیه فرصت داره رأی بده.")
 
     for i, target_id in enumerate(sequence, start=1):
-        target_member = ctx.guild.get_member(target_id)
         vote_msg = await ctx.send(f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: 0")
 
         def check(m):
@@ -217,18 +216,26 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
                 m.content.strip() != ""
             )
 
-        try:
-            while True:
-                msg = await bot.wait_for("message", timeout=5.0, check=check)
+        end_time = asyncio.get_event_loop().time() + 5
+        while True:
+            timeout = end_time - asyncio.get_event_loop().time()
+            if timeout <= 0:
+                break
+            try:
+                msg = await bot.wait_for("message", timeout=timeout, check=check)
                 if msg.author.id not in votes[target_id]:
                     votes[target_id].append(msg.author.id)
                     await vote_msg.edit(content=f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: {len(votes[target_id])}")
-        except asyncio.TimeoutError:
-            pass  # پایان نوبت
+            except asyncio.TimeoutError:
+                break
 
-    game["votes"] = votes  # ذخیره رأی‌ها برای دستور .اعدام
-
+    game["votes"] = votes
     await ctx.send("✅ رأی‌گیری نوبتی به پایان رسید. برای اعدام از دستور `.اعدام` استفاده کن.")
+
+
+
+
+
 
 
 @bot.command(name="اعدام")
@@ -297,6 +304,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
