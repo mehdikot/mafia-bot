@@ -171,21 +171,52 @@ async def on_interaction(interaction: discord.Interaction):
         return
 
     custom_id = interaction.data.get("custom_id", "")
-    if custom_id.startswith("scenario_"):
+
+    # مرحله اول: انتخاب سناریو
+    if custom_id.startswith("scenario_") and "_" not in custom_id[9:]:
         scenario_name = custom_id.split("_", 1)[1]
-        scenario = SCENARIOS.get(scenario_name)
-        if not scenario:
+        scenario_versions = SCENARIOS.get(scenario_name)
+        if not scenario_versions:
             await interaction.response.send_message("❌ سناریو یافت نشد.", ephemeral=True)
             return
 
-        # تقسیم نقش‌ها
+        class PlayerCountView(discord.ui.View):
+            def __init__(self, scenario_name, options):
+                super().__init__(timeout=None)
+                for opt in options:
+                    self.add_item(
+                        discord.ui.Button(
+                            label=f"{scenario_name} - {opt} نفره",
+                            style=discord.ButtonStyle.primary,
+                            custom_id=f"scenario_{scenario_name}_{opt}"
+                        )
+                    )
+
+        await interaction.response.edit_message(
+            content=f"📋 سناریو **{scenario_name}** انتخاب شد. حالا تعداد بازیکنان رو انتخاب کن:",
+            view=PlayerCountView(scenario_name, scenario_versions.keys())
+        )
+        return
+
+    # مرحله دوم: انتخاب تعداد بازیکنان
+    if custom_id.startswith("scenario_") and "_" in custom_id[9:]:
+        _, scenario_name, count = custom_id.split("_", 2)
+        scenario_versions = SCENARIOS.get(scenario_name)
+        if not scenario_versions or count not in scenario_versions:
+            await interaction.response.send_message("❌ نسخه‌ی سناریو یافت نشد.", ephemeral=True)
+            return
+
+        roles = scenario_versions[count]
         players = list(game["players"])
-        roles = scenario["roles"][:]
-        while len(roles) < len(players):
-            roles.append("شهروند")
+
+        if len(players) != int(count):
+            await interaction.response.send_message(
+                f"⚠️ تعداد بازیکنان ({len(players)}) با نسخه‌ی انتخابی ({count}) همخوانی نداره.",
+                ephemeral=True
+            )
+            return
 
         random.shuffle(roles)
-
         assignments = {}
         for player_id, role in zip(players, roles):
             member = interaction.guild.get_member(player_id)
@@ -203,16 +234,14 @@ async def on_interaction(interaction: discord.Interaction):
             [f"🔹 {interaction.guild.get_member(pid).display_name} → {role}" for pid, role in assignments.items()]
         )
         try:
-            await god_member.send(f"📋 لیست نقش‌ها برای این بازی:\n\n{role_list}")
+            await god_member.send(f"📋 لیست نقش‌ها برای این بازی ({scenario_name} - {count} نفره):\n\n{role_list}")
         except:
             await interaction.channel.send("⚠️ نتونستم لیست نقش‌ها رو برای گاد بفرستم (پی‌وی بسته است).")
 
         await interaction.response.edit_message(
-            content=f"✅ سناریو **{scenario_name}** انتخاب شد و نقش‌ها تقسیم شدند.",
+            content=f"✅ سناریو **{scenario_name}** ({count} نفره) انتخاب شد و نقش‌ها تقسیم شدند.",
             view=None
         )
-
-
 
 
 
@@ -451,6 +480,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
