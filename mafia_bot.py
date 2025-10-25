@@ -179,6 +179,48 @@ async def on_interaction(interaction: discord.Interaction):
 @bot.event
 async def on_ready():
     print(f"✅ بات فعال شد: {bot.user.name}")
+
+
+    @bot.command(name="v")
+async def vote_by_number(ctx, mode: str, start: int, direction: str, count: int):
+    game = GAMES.get(ctx.channel.id)
+    if not game or ctx.author.id != game["god_id"]:
+        await ctx.send("🚫 فقط گاد می‌تونه رأی‌گیری عددی انجام بده.")
+        return
+
+    players = list(game["players"])
+    if len(players) == 0:
+        await ctx.send("❌ هیچ بازیکنی وارد بازی نشده.")
+        return
+
+    if start < 1 or start > len(players):
+        await ctx.send(f"⚠️ شماره شروع باید بین 1 تا {len(players)} باشه.")
+        return
+
+    if direction not in ["u", "d"]:
+        await ctx.send("⚠️ جهت باید `u` (بالا) یا `d` (پایین) باشه.")
+        return
+
+    sequence = []
+    idx = start - 1
+    for _ in range(count):
+        if direction == "u":
+            idx = (idx + 1) % len(players)
+        else:
+            idx = (idx - 1 + len(players)) % len(players)
+        sequence.append(players[idx])
+
+    result_lines = []
+    for i, uid in enumerate(sequence, start=1):
+        result_lines.append(f"{i}. <@{uid}> → رأی {mode}")
+
+    embed = discord.Embed(
+        title="🗳️ رأی‌گیری عددی توسط گاد",
+        description=f"📌 نوع رأی: **{mode}**\n🔢 شروع از شماره: {start}\n↕️ جهت: {'بالا' if direction == 'u' else 'پایین'}\n🧮 تعداد رأی‌ها: {count}\n\n" + "\n".join(result_lines),
+        color=discord.Color.orange()
+    )
+    await ctx.send(embed=embed)
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
