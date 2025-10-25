@@ -216,21 +216,31 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
                 m.content.strip() != ""
             )
 
-        end_time = asyncio.get_event_loop().time() + 5
-        while True:
-            timeout = end_time - asyncio.get_event_loop().time()
-            if timeout <= 0:
-                break
-            try:
-                msg = await bot.wait_for("message", timeout=timeout, check=check)
-                if msg.author.id not in votes[target_id]:
-                    votes[target_id].append(msg.author.id)
-                    await vote_msg.edit(content=f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: {len(votes[target_id])}")
-            except asyncio.TimeoutError:
-                break
+        collected_votes = []
+
+        async def collect_votes():
+            end_time = asyncio.get_event_loop().time() + 5
+            while True:
+                timeout = end_time - asyncio.get_event_loop().time()
+                if timeout <= 0:
+                    break
+                try:
+                    msg = await bot.wait_for("message", timeout=timeout, check=check)
+                    if msg.author.id not in collected_votes:
+                        collected_votes.append(msg.author.id)
+                        await vote_msg.edit(content=f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: {len(collected_votes)}")
+                except asyncio.TimeoutError:
+                    break
+
+        await collect_votes()
+        votes[target_id] = collected_votes
 
     game["votes"] = votes
     await ctx.send("✅ رأی‌گیری نوبتی به پایان رسید. برای اعدام از دستور `.اعدام` استفاده کن.")
+
+
+
+
 
 
 
@@ -304,6 +314,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
