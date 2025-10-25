@@ -217,7 +217,7 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
         return
 
     players = list(game["players"])
-    if len(players) == 0:
+    if not players:
         await ctx.send("❌ هیچ بازیکنی وارد بازی نشده.")
         return
 
@@ -243,20 +243,13 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
 
     # رأی‌گیری برای هر بازیکن
     for i, target_id in enumerate(sequence, start=1):
-        target_member = ctx.guild.get_member(target_id)
         vote_msg = await ctx.send(f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: در حال شمارش...")
 
         collected_votes = []
 
         def check(m):
-            return (
-                m.channel == ctx.channel and
-                m.author.id in game["players"] and
-                m.author.id != target_id and
-                m.content.strip() != ""
-            )
+            return m.channel == ctx.channel and not m.author.bot
 
-        # جمع‌آوری رأی‌ها در ۵ ثانیه
         end_time = asyncio.get_event_loop().time() + 5
         while True:
             timeout = end_time - asyncio.get_event_loop().time()
@@ -271,9 +264,9 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
 
         game["votes"][target_id] = collected_votes
 
-        # ساخت متن نهایی برای ادیت پیام
+        # ساخت متن نهایی
         if collected_votes:
-            voter_lines = [f"{idx}. <@{voter_id}>" for idx, voter_id in enumerate(collected_votes, start=1)]
+            voter_lines = [f"{idx+1}. <@{uid}>" for idx, uid in enumerate(collected_votes)]
             result_text = f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: {len(collected_votes)}\n" + "\n".join(voter_lines)
         else:
             result_text = f"🔢 شماره {i} → <@{target_id}> | هیچ‌کس رأی نداد."
@@ -281,6 +274,8 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
         await vote_msg.edit(content=result_text)
 
     await ctx.send("✅ رأی‌گیری نوبتی به پایان رسید. برای اعدام از دستور `.اعدام` استفاده کن.")
+
+
 
 
 
@@ -364,6 +359,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
