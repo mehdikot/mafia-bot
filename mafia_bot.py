@@ -1,24 +1,22 @@
-# mafia_farsi_bot.py
 import os
 import discord
 from discord.ext import commands
+import asyncio
 
-TOKEN = os.getenv("DISCORD_TOKEN")
-INTENTS = discord.Intents.default()
-INTENTS.message_content = True
-INTENTS.guilds = True
-INTENTS.members = True
+TOKEN = "توکن_بات_شخصی_شما"
 
-bot = commands.Bot(command_prefix=".", intents=INTENTS)
+intents = discord.Intents.default()
+intents.message_content = True
+intents.guilds = True
+intents.members = True
 
-# لینک‌های تصویر شب و روز
+bot = commands.Bot(command_prefix=".", intents=intents)
+
 NIGHT_IMAGE_URL = "https://s6.uupload.ir/files/night_25.jpg"
 DAY_IMAGE_URL = "https://s6.uupload.ir/files/day_ho71.jpg"
 
-# وضعیت بازی‌ها در کانال‌ها
-GAMES = {}  # channel_id -> {players: set, god_id: int}
+GAMES = {}  # channel_id -> {players: set, god_id: int, votes: dict}
 
-# سناریوهای قابل انتخاب توسط گاد
 SCENARIOS = {
     "بازپرس": {
         "players": 10,
@@ -50,13 +48,13 @@ SCENARIOS = {
     }
 }
 
-# دستور ساخت بازی
+
+
 @bot.command(name="بازی")
 async def create_game(ctx):
-    GAMES[ctx.channel.id] = {"players": set(), "god_id": ctx.author.id}
+    GAMES[ctx.channel.id] = {"players": set(), "god_id": ctx.author.id, "votes": {}}
     await ctx.send(f"🎮 بازی جدید ساخته شد.\n👑 گاد: <@{ctx.author.id}>\nبرای ورود از دستور `.اد` استفاده کنید.")
 
-# دستور ورود بازیکن
 @bot.command(name="اد")
 async def join_game(ctx):
     game = GAMES.get(ctx.channel.id)
@@ -66,7 +64,6 @@ async def join_game(ctx):
     game["players"].add(ctx.author.id)
     await ctx.send(f"✅ <@{ctx.author.id}> وارد بازی شد. تعداد بازیکنان: {len(game['players'])}")
 
-# دستور تعیین گاد توسط خودش
 @bot.command(name="گاد")
 async def set_god(ctx):
     game = GAMES.get(ctx.channel.id)
@@ -76,7 +73,6 @@ async def set_god(ctx):
     game["god_id"] = ctx.author.id
     await ctx.send(f"👑 <@{ctx.author.id}> حالا گاد بازیه.")
 
-# دستور تعیین گاد برای دیگران
 @bot.command(name="گاد_تعیین")
 async def assign_god(ctx, member: discord.Member):
     game = GAMES.get(ctx.channel.id)
@@ -89,7 +85,6 @@ async def assign_god(ctx, member: discord.Member):
     game["god_id"] = member.id
     await ctx.send(f"👑 <@{member.id}> حالا گاد بازیه.")
 
-# دستور وضعیت بازی
 @bot.command(name="وضعیت")
 async def game_status(ctx):
     game = GAMES.get(ctx.channel.id)
@@ -99,7 +94,6 @@ async def game_status(ctx):
     players = ", ".join([f"<@{uid}>" for uid in game["players"]]) or "—"
     await ctx.send(f"📊 وضعیت بازی:\n👑 گاد: <@{game['god_id']}>\n🧑‍🤝‍🧑 بازیکنان: {players}")
 
-# دستور شب
 @bot.command(name="شب")
 async def send_night(ctx):
     embed = discord.Embed(
@@ -111,7 +105,6 @@ async def send_night(ctx):
     embed.set_footer(text="🕯️ آرامش شبانه در شهر مافیا")
     await ctx.send(embed=embed)
 
-# دستور روز
 @bot.command(name="روز")
 async def send_day(ctx):
     embed = discord.Embed(
@@ -123,14 +116,10 @@ async def send_day(ctx):
     embed.set_footer(text="🌇 بیداری و هیاهوی شهر")
     await ctx.send(embed=embed)
 
-# دستور شروع رسمی بازی با انتخاب سناریو
 @bot.command(name="sg")
 async def start_game(ctx):
     game = GAMES.get(ctx.channel.id)
-    if not game:
-        await ctx.send("❌ هنوز بازی‌ای ساخته نشده. از `.بازی` استفاده کن.")
-        return
-    if ctx.author.id != game["god_id"]:
+    if not game or ctx.author.id != game["god_id"]:
         await ctx.send("🚫 فقط گاد می‌تونه بازی رو ران کنه.")
         return
 
@@ -151,7 +140,6 @@ async def start_game(ctx):
     )
     await ctx.send(embed=embed, view=ScenarioView())
 
-# هندل انتخاب سناریو با دکمه
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
     cid = interaction.channel.id
@@ -175,56 +163,13 @@ async def on_interaction(interaction: discord.Interaction):
         )
         await interaction.response.edit_message(embed=embed, view=None)
 
-# راه‌اندازی بات
-@bot.event
-async def on_ready():
-    print(f"✅ بات فعال شد: {bot.user.name}")
 
 
-    @bot.command(name="v")
-async def vote_by_number(ctx, mode: str, start: int, direction: str, count: int):
-    game = GAMES.get(ctx.channel.id)
-    if not game or ctx.author.id != game["god_id"]:
-        await ctx.send("🚫 فقط گاد می‌تونه رأی‌گیری عددی انجام بده.")
-        return
 
-    players = list(game["players"])
-    if len(players) == 0:
-        await ctx.send("❌ هیچ بازیکنی وارد بازی نشده.")
-        return
 
-    if start < 1 or start > len(players):
-        await ctx.send(f"⚠️ شماره شروع باید بین 1 تا {len(players)} باشه.")
-        return
 
-    if direction not in ["u", "d"]:
-        await ctx.send("⚠️ جهت باید `u` (بالا) یا `d` (پایین) باشه.")
-        return
 
-    sequence = []
-    idx = start - 1
-    for _ in range(count):
-        if direction == "u":
-            idx = (idx + 1) % len(players)
-        else:
-            idx = (idx - 1 + len(players)) % len(players)
-        sequence.append(players[idx])
 
-    result_lines = []
-    for i, uid in enumerate(sequence, start=1):
-        result_lines.append(f"{i}. <@{uid}> → رأی {mode}")
-
-    embed = discord.Embed(
-        title="🗳️ رأی‌گیری عددی توسط گاد",
-        description=f"📌 نوع رأی: **{mode}**\n🔢 شروع از شماره: {start}\n↕️ جهت: {'بالا' if direction == 'u' else 'پایین'}\n🧮 تعداد رأی‌ها: {count}\n\n" + "\n".join(result_lines),
-        color=discord.Color.orange()
-    )
-    await ctx.send(embed=embed)
-    print("📌 دستورات فارسی آماده استفاده هستن.")
-
-bot.run(TOKEN)
-
-import asyncio
 
 @bot.command(name="v")
 async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
@@ -256,7 +201,6 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
         sequence.append(players[idx])
 
     votes = {uid: [] for uid in sequence}
-
     await ctx.send(f"🗳️ رأی‌گیری نوع **{mode}** آغاز شد.\n⏳ هر بازیکن ۵ ثانیه فرصت داره رأی بده (با ارسال پیام مثل `.` یا هر چیز).")
 
     for i, target_id in enumerate(sequence, start=1):
@@ -264,7 +208,12 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
         await ctx.send(f"\n🔢 شماره {i} → <@{target_id}>")
 
         def check(m):
-            return m.channel == ctx.channel and m.author.id in game["players"] and m.author.id != target_id
+            return (
+                m.channel == ctx.channel and
+                m.author.id in game["players"] and
+                m.author.id != target_id and
+                m.content.strip() != ""
+            )
 
         try:
             while True:
@@ -272,9 +221,8 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
                 if msg.author.id not in votes[target_id]:
                     votes[target_id].append(msg.author.id)
         except asyncio.TimeoutError:
-            pass  # پایان نوبت
+            pass
 
-    # نمایش نتیجه نهایی
     result_lines = []
     for i, uid in enumerate(sequence, start=1):
         voter_list = ", ".join([f"<@{vid}>" for vid in votes[uid]]) or "هیچ‌کس"
@@ -286,3 +234,88 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
         color=discord.Color.orange()
     )
     await ctx.send(embed=embed)
+
+
+
+
+
+
+
+
+@bot.command(name="اعدام")
+async def execute_vote(ctx):
+    game = GAMES.get(ctx.channel.id)
+    if not game or ctx.author.id != game["god_id"]:
+        await ctx.send("🚫 فقط گاد می‌تونه اعدام رو انجام بده.")
+        return
+
+    votes = game.get("votes", {})
+    if not votes:
+        await ctx.send("❌ هیچ رأیی ثبت نشده.")
+        return
+
+    tally = {}
+    for target_id, voter_ids in votes.items():
+        tally[target_id] = len(voter_ids)
+
+    if not tally:
+        await ctx.send("⚠️ هیچ رأی معتبری وجود ندارد.")
+        return
+
+    max_votes = max(tally.values())
+    candidates = [uid for uid, count in tally.items() if count == max_votes]
+
+    if len(candidates) > 1:
+        await ctx.send("⚖️ رأی مساوی شد. کسی اعدام نشد.")
+        return
+
+    executed = candidates[0]
+    role = "نامشخص"
+    if "roles" in game:
+        role = game["roles"].get(executed, "نامشخص")
+
+    game["players"].discard(executed)
+    await ctx.send(f"☠️ <@{executed}> با نقش **{role}** اعدام شد.")
+
+    # بررسی برد
+    mafia_alive = [uid for uid in game["players"] if "مافیا" in game.get("roles", {}).get(uid, "")]
+    others_alive = [uid for uid in game["players"] if uid not in mafia_alive]
+
+    if not mafia_alive:
+        await ctx.send("🎉 شهروندها برنده شدند!")
+    elif len(mafia_alive) >= len(others_alive):
+        await ctx.send("😈 مافیاها کنترل شهر رو به دست گرفتن. مافیا برنده شد!")
+
+    # پاک‌سازی رأی‌ها
+    game["votes"] = {}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@bot.event
+async def on_ready():
+    print(f"✅ بات فعال شد: {bot.user.name}")
+    print("📌 دستورات فارسی آماده استفاده هستن.")
+
+bot.run(TOKEN)
+
+
+
+
+
+
+
+
+
+
+
