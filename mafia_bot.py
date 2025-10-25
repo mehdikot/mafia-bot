@@ -438,51 +438,7 @@ async def execute_vote(ctx):
 
 
 
-import random
 
-@bot.command(name="sg")
-async def start_game(ctx):
-    game = GAMES.get(ctx.channel.id)
-    if not game or ctx.author.id != game["god_id"]:
-        await ctx.send("🚫 فقط گاد می‌تونه نقش‌ها رو تقسیم کنه.")
-        return
-
-    players = list(game["players"])
-    if len(players) == 0:
-        await ctx.send("❌ هیچ بازیکنی وارد بازی نشده.")
-        return
-
-    # 🎲 تعریف نقش‌ها (اینجا می‌تونی بسته به تعداد بازیکنان تغییر بدی)
-    roles = ["مافیا", "مافیا", "دکتر", "کارآگاه"]
-    while len(roles) < len(players):
-        roles.append("شهروند")
-
-    # 🔀 مخلوط کردن نقش‌ها
-    random.shuffle(roles)
-
-    # 📩 ارسال نقش‌ها به صورت پی‌وی
-    assignments = {}
-    for player_id, role in zip(players, roles):
-        member = ctx.guild.get_member(player_id)
-        assignments[player_id] = role
-        try:
-            await member.send(f"🎭 نقش شما در این بازی: **{role}**")
-        except:
-            await ctx.send(f"⚠️ نتونستم نقش رو برای <@{player_id}> بفرستم (پی‌وی بسته است).")
-
-    # ذخیره نقش‌ها در بازی
-    game["roles"] = assignments
-
-    # 📜 ساخت لیست نقش‌ها برای گاد
-    god_member = ctx.guild.get_member(game["god_id"])
-    role_list = "\n".join([f"🔹 {ctx.guild.get_member(pid).display_name} → {role}" for pid, role in assignments.items()])
-
-    try:
-        await god_member.send(f"📋 لیست نقش‌ها برای این بازی:\n\n{role_list}")
-    except:
-        await ctx.send("⚠️ نتونستم لیست نقش‌ها رو برای گاد بفرستم (پی‌وی بسته است).")
-
-    await ctx.send("✅ نقش‌ها به صورت رندم تقسیم شدند و برای هر بازیکن ارسال شد.")
 
 
 
@@ -499,6 +455,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
