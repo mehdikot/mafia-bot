@@ -241,7 +241,6 @@ class PlayerCountSelect(discord.ui.View):
 
     
 
-
 # دستور شروع بازی
 @bot.command(name="sg")
 async def start_game(ctx):
@@ -271,7 +270,37 @@ async def start_game(ctx):
         description=f"🎮 بازی قراره ران بشه!\n👑 گاد: <@{ctx.author.id}>\n\nلطفاً یکی از سناریوهای زیر رو انتخاب کن:",
         color=discord.Color.green()
     )
-    await ctx
+    await ctx.send(embed=embed, view=ScenarioView())
+
+
+# مدیریت انتخاب سناریو
+@bot.event
+async def on_interaction(interaction: discord.Interaction):
+    cid = interaction.channel.id
+    game = GAMES.get(cid)
+    if not game or interaction.user.id != game["god_id"]:
+        return  # فقط گاد می‌تونه انتخاب کنه
+
+    custom_id = interaction.data.get("custom_id", "")
+
+    # مرحله اول: انتخاب سناریو
+    if custom_id.startswith("scenario_") and "_" not in custom_id[9:]:
+        scenario_name = custom_id.split("_", 1)[1]
+        scenario_versions = SCENARIOS.get(scenario_name)
+        if not scenario_versions:
+            await interaction.response.send_message("❌ سناریو یافت نشد.", ephemeral=True)
+            return
+
+        await interaction.response.edit_message(
+            content=f"📋 سناریو **{scenario_name}** انتخاب شد. حالا تعداد بازیکنان رو انتخاب کن:",
+            view=PlayerCountSelect(scenario_name, scenario_versions.keys())
+        )
+
+
+
+
+
+    
 
 
 
@@ -526,6 +555,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
