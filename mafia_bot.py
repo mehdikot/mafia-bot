@@ -173,13 +173,34 @@ async def on_interaction(interaction: discord.Interaction):
 
 
 
+@bot.command(name="vtest")
+async def vtest(ctx):
+    vote_msg = await ctx.send("✍️ رأی‌گیری شروع شد! هر کسی هر چیزی بنویسه، رأیش ثبت میشه. (۵ ثانیه)")
 
-@bot.command()
-async def testedit(ctx):
-    msg = await ctx.send("این پیام بعد از ۵ ثانیه ادیت میشه...")
-    await asyncio.sleep(5)
-    await msg.edit(content="✅ پیام با موفقیت ادیت شد!")
+    collected_votes = []
 
+    def check(m):
+        return m.channel == ctx.channel and not m.author.bot
+
+    end_time = asyncio.get_event_loop().time() + 5
+    while True:
+        timeout = end_time - asyncio.get_event_loop().time()
+        if timeout <= 0:
+            break
+        try:
+            msg = await bot.wait_for("message", timeout=timeout, check=check)
+            if msg.author.id not in collected_votes:
+                collected_votes.append(msg.author.id)
+        except asyncio.TimeoutError:
+            break
+
+    if collected_votes:
+        voter_lines = [f"{i+1}. <@{uid}>" for i, uid in enumerate(collected_votes)]
+        result_text = f"📊 رأی‌ها: {len(collected_votes)}\n" + "\n".join(voter_lines)
+    else:
+        result_text = "📊 هیچ‌کس رأی نداد."
+
+    await vote_msg.edit(content=result_text)
 
 
 
@@ -343,6 +364,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
