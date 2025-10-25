@@ -171,32 +171,14 @@ async def on_interaction(interaction: discord.Interaction):
 
 
 
-VOTE_SESSION = {}  # channel_id -> {target_id: int, voters: set, message: discord.Message}
-@bot.event
-async def on_message(message):
-    await bot.process_commands(message)
-
-    cid = message.channel.id
-    session = VOTE_SESSION.get(cid)
-    if not session:
-        return
-
-    if message.author.bot:
-        return
-
-    target_id = session["target_id"]
-    if message.author.id == target_id:
-        return
-
-    if message.author.id in session["voters"]:
-        return
-
-    session["voters"].add(message.author.id)
-    voter_list = "\n".join([f"{i+1}. <@{uid}>" for i, uid in enumerate(session["voters"])])
-    await session["message"].edit(content=f"🔢 رأی برای <@{target_id}> ثبت شد:\n{voter_list}")
 
 
 
+@bot.command()
+async def testedit(ctx):
+    msg = await ctx.send("این پیام بعد از ۵ ثانیه ادیت میشه...")
+    await asyncio.sleep(5)
+    await msg.edit(content="✅ پیام با موفقیت ادیت شد!")
 
 
 
@@ -361,6 +343,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
