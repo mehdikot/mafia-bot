@@ -171,6 +171,39 @@ async def on_interaction(interaction: discord.Interaction):
 
 
 
+VOTE_SESSION = {}  # channel_id -> {target_id: int, voters: set, message: discord.Message}
+@bot.event
+async def on_message(message):
+    await bot.process_commands(message)
+
+    cid = message.channel.id
+    session = VOTE_SESSION.get(cid)
+    if not session:
+        return
+
+    if message.author.bot:
+        return
+
+    target_id = session["target_id"]
+    if message.author.id == target_id:
+        return
+
+    if message.author.id in session["voters"]:
+        return
+
+    session["voters"].add(message.author.id)
+    voter_list = "\n".join([f"{i+1}. <@{uid}>" for i, uid in enumerate(session["voters"])])
+    await session["message"].edit(content=f"🔢 رأی برای <@{target_id}> ثبت شد:\n{voter_list}")
+
+
+
+
+
+
+
+
+
+
 
 
 @bot.command(name="v")
@@ -202,50 +235,25 @@ async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
             idx = (idx - 1 + len(players)) % len(players)
         sequence.append(players[idx])
 
-    votes = {uid: [] for uid in sequence}
-    await ctx.send(f"🗳️ رأی‌گیری نوع **{mode}** آغاز شد.\n⏳ هر بازیکن ۵ ثانیه فرصت داره رأی بده.")
+    game["votes"] = {}
 
     for i, target_id in enumerate(sequence, start=1):
-        target_member = ctx.guild.get_member(target_id)
-        vote_msg = await ctx.send(f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: در حال شمارش...")
+        msg = await ctx.send(f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: در حال شمارش...")
+        VOTE_SESSION[ctx.channel.id] = {
+            "target_id": target_id,
+            "voters": set(),
+            "message": msg
+        }
+        await asyncio.sleep(5)
+        voters = VOTE_SESSION[ctx.channel.id]["voters"]
+        game["votes"][target_id] = list(voters)
+        del VOTE_SESSION[ctx.channel.id]
 
-        def check(m):
-            return (
-                m.channel == ctx.channel and
-                m.author.id in game["players"] and
-                m.author.id != target_id and
-                m.content.strip() != ""
-            )
-
-        collected_votes = []
-
-        end_time = asyncio.get_event_loop().time() + 5
-        while True:
-            timeout = end_time - asyncio.get_event_loop().time()
-            if timeout <= 0:
-                break
-            try:
-                msg = await bot.wait_for("message", timeout=timeout, check=check)
-                if msg.author.id not in collected_votes:
-                    collected_votes.append(msg.author.id)
-            except asyncio.TimeoutError:
-                break
-
-        votes[target_id] = collected_votes
-
-        # ساخت لیست رأی‌دهندگان با شماره
-        voter_lines = []
-        for idx, voter_id in enumerate(collected_votes, start=1):
-            voter_lines.append(f"{idx}. <@{voter_id}>")
-
-        result_text = f"🔢 شماره {i} → <@{target_id}> | رأی‌ها: {len(collected_votes)}\n" + (
-            "\n".join(voter_lines) if voter_lines else "هیچ‌کس رأی نداد."
-        )
-
-        await vote_msg.edit(content=result_text)
-
-    game["votes"] = votes
     await ctx.send("✅ رأی‌گیری نوبتی به پایان رسید. برای اعدام از دستور `.اعدام` استفاده کن.")
+
+
+
+
 
 
 
@@ -322,6 +330,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
