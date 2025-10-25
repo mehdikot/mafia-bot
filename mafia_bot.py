@@ -176,37 +176,46 @@ async def start_game(ctx):
         await ctx.send("❌ هنوز سناریو انتخاب نشده.")
         return
 
+    # گرفتن نقش‌ها بر اساس تعداد بازیکنان
     scenario_roles = SCENARIOS[game["scenario"]].get(str(len(game["players"])))
     if not scenario_roles:
         await ctx.send("⚠️ تعداد بازیکنان با هیچ نسخه‌ای از این سناریو نمی‌خونه.")
         return
 
+    # شماره‌گذاری بازیکنان
+    players = list(game["players"])
+    random.shuffle(players)
+    numbered = {pid: i+1 for i, pid in enumerate(players)}
+    game["numbers"] = numbered
+
+    # تقسیم نقش‌ها
     roles = scenario_roles.copy()
     random.shuffle(roles)
     assignments = {}
-    for player_id, role in zip(game["players"], roles):
-        assignments[player_id] = role
-        if player_id > 0:  # بازیکن واقعی
-            member = ctx.guild.get_member(player_id)
+    for pid, role in zip(players, roles):
+        assignments[pid] = role
+        if pid > 0:  # بازیکن واقعی
+            member = ctx.guild.get_member(pid)
             try:
-                await member.send(f"🎭 نقش شما: **{role}**")
+                await member.send(f"🎭 شما Player{numbered[pid]} هستید.\nنقش شما: **{role}**")
             except:
-                await ctx.send(f"⚠️ نتونستم نقش رو برای <@{player_id}> بفرستم (پی‌وی بسته است).")
+                await ctx.send(f"⚠️ نتونستم نقش رو برای <@{pid}> بفرستم (پی‌وی بسته است).")
 
     game["roles"] = assignments
 
     # لیست نقش‌ها برای گاد
-    god_member = ctx.guild.get_member(game["god_id"])
     role_list = "\n".join(
-        [f"🔹 {(ctx.guild.get_member(pid).display_name if pid > 0 else f'FakePlayer{abs(pid)}')} → {role}"
-         for pid, role in assignments.items()]
+        [f"🔹 Player{num} → {assignments[pid]}" for pid, num in numbered.items()]
     )
+    god_member = ctx.guild.get_member(game["god_id"])
     try:
         await god_member.send(f"📋 لیست نقش‌ها:\n\n{role_list}")
     except:
         await ctx.send("⚠️ نتونستم لیست نقش‌ها رو برای گاد بفرستم (پی‌وی بسته است).")
 
-    await ctx.send("✅ نقش‌ها تقسیم شدند.")
+    # نمایش شماره بازیکنان در کانال
+    players_list = "\n".join([f"Player{num}" for _, num in numbered.items()])
+    await ctx.send(f"✅ نقش‌ها تقسیم شدند.\n\n👥 بازیکنان:\n{players_list}")
 
 
 
@@ -219,5 +228,6 @@ async def start_game(ctx):
 
 # اجرای بات
 bot.run(TOKEN)
+
 
 
