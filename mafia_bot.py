@@ -224,3 +224,65 @@ async def vote_by_number(ctx, mode: str, start: int, direction: str, count: int)
 
 bot.run(TOKEN)
 
+import asyncio
+
+@bot.command(name="v")
+async def vote_sequence(ctx, mode: str, start: int, direction: str, count: int):
+    game = GAMES.get(ctx.channel.id)
+    if not game or ctx.author.id != game["god_id"]:
+        await ctx.send("🚫 فقط گاد می‌تونه رأی‌گیری نوبتی انجام بده.")
+        return
+
+    players = list(game["players"])
+    if len(players) == 0:
+        await ctx.send("❌ هیچ بازیکنی وارد بازی نشده.")
+        return
+
+    if start < 1 or start > len(players):
+        await ctx.send(f"⚠️ شماره شروع باید بین 1 تا {len(players)} باشه.")
+        return
+
+    if direction not in ["u", "d"]:
+        await ctx.send("⚠️ جهت باید `u` (بالا) یا `d` (پایین) باشه.")
+        return
+
+    sequence = []
+    idx = start - 1
+    for _ in range(count):
+        if direction == "u":
+            idx = (idx + 1) % len(players)
+        else:
+            idx = (idx - 1 + len(players)) % len(players)
+        sequence.append(players[idx])
+
+    votes = {uid: [] for uid in sequence}
+
+    await ctx.send(f"🗳️ رأی‌گیری نوع **{mode}** آغاز شد.\n⏳ هر بازیکن ۵ ثانیه فرصت داره رأی بده (با ارسال پیام مثل `.` یا هر چیز).")
+
+    for i, target_id in enumerate(sequence, start=1):
+        target_member = ctx.guild.get_member(target_id)
+        await ctx.send(f"\n🔢 شماره {i} → <@{target_id}>")
+
+        def check(m):
+            return m.channel == ctx.channel and m.author.id in game["players"] and m.author.id != target_id
+
+        try:
+            while True:
+                msg = await bot.wait_for("message", timeout=5.0, check=check)
+                if msg.author.id not in votes[target_id]:
+                    votes[target_id].append(msg.author.id)
+        except asyncio.TimeoutError:
+            pass  # پایان نوبت
+
+    # نمایش نتیجه نهایی
+    result_lines = []
+    for i, uid in enumerate(sequence, start=1):
+        voter_list = ", ".join([f"<@{vid}>" for vid in votes[uid]]) or "هیچ‌کس"
+        result_lines.append(f"{i}. <@{uid}> → {len(votes[uid])} رأی | رأی‌دهندگان: {voter_list}")
+
+    embed = discord.Embed(
+        title="📊 نتیجه رأی‌گیری نوبتی",
+        description="\n".join(result_lines),
+        color=discord.Color.orange()
+    )
+    await ctx.send(embed=embed)
