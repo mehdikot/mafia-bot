@@ -3,7 +3,8 @@ import discord
 from discord.ext import commands
 import asyncio
 
-TOKEN = "توکن_بات_شخصی_شما"
+from dotenv import load_dotenv
+load_dotenv()
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -308,6 +309,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
