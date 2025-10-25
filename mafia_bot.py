@@ -107,6 +107,10 @@ async def send_day(ctx):
 
 
 
+
+
+
+
 import random
 import discord
 from discord.ext import commands
@@ -130,7 +134,6 @@ SCENARIOS = {
             "دن مافیا", "جادوگر", "جلاد", "خبرچین"
         ]
     },
-
     "تکاور": {
         "10": [
             "دکتر", "کارآگاه", "نگهبان", "تکاور", "تفنگدار",
@@ -145,7 +148,6 @@ SCENARIOS = {
             "دن مافیا", "ناتو", "گروگان‌گیر", "مافیا ساده", "مافیا ساده", "مافیا ساده"
         ]
     },
-
     "بازپرس": {
         "10": [
             "دکتر", "کارآگاه", "محقق", "بازپرس", "رویین‌تن", "شهروند ساده", "شهروند ساده",
@@ -162,7 +164,7 @@ SCENARIOS = {
     }
 }
 
-# دستور شروع بازی و انتخاب سناریو
+# دستور شروع بازی
 @bot.command(name="sg")
 async def start_game(ctx):
     game = GAMES.get(ctx.channel.id)
@@ -213,6 +215,9 @@ async def on_interaction(interaction: discord.Interaction):
             await interaction.response.send_message("❌ سناریو یافت نشد.", ephemeral=True)
             return
 
+        # ✅ پاسخ اولیه برای جلوگیری از خطا
+        await interaction.response.defer()
+
         class PlayerCountView(discord.ui.View):
             def __init__(self, scenario_name, options):
                 super().__init__(timeout=None)
@@ -225,7 +230,7 @@ async def on_interaction(interaction: discord.Interaction):
                         )
                     )
 
-        await interaction.response.edit_message(
+        await interaction.edit_original_response(
             content=f"📋 سناریو **{scenario_name}** انتخاب شد. حالا تعداد بازیکنان رو انتخاب کن:",
             view=PlayerCountView(scenario_name, scenario_versions.keys())
         )
@@ -249,6 +254,9 @@ async def on_interaction(interaction: discord.Interaction):
             )
             return
 
+        # ✅ پاسخ اولیه برای جلوگیری از خطا
+        await interaction.response.defer()
+
         random.shuffle(roles)
         assignments = {}
         for player_id, role in zip(players, roles):
@@ -271,11 +279,21 @@ async def on_interaction(interaction: discord.Interaction):
         except:
             await interaction.channel.send("⚠️ نتونستم لیست نقش‌ها رو برای گاد بفرستم (پی‌وی بسته است).")
 
-        await interaction.response.edit_message(
+        await interaction.edit_original_response(
             content=f"✅ سناریو **{scenario_name}** ({count} نفره) انتخاب شد و نقش‌ها تقسیم شدند.",
             view=None
         )
 
+
+
+
+
+
+
+
+
+
+    
 
 
 
@@ -512,6 +530,7 @@ async def on_ready():
     print("📌 دستورات فارسی آماده استفاده هستن.")
 
 bot.run(TOKEN)
+
 
 
 
