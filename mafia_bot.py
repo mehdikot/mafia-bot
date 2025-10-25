@@ -13,7 +13,7 @@ intents.members = True
 bot = commands.Bot(command_prefix=".", intents=intents)
 
 # دیتای بازی‌ها
-GAMES = {}  # channel_id -> {players: set, god_id: int, scenario: str, roles: dict, message: int}
+GAMES = {}  # channel_id -> {players: list, god_id: int, scenario: str, roles: dict, message: int}
 
 # سناریوها
 SCENARIOS = {
@@ -36,6 +36,7 @@ SCENARIOS = {
 
 
 
+
 async def update_player_list(channel):
     game = GAMES.get(channel.id)
     if not game or not game.get("message"):
@@ -43,7 +44,7 @@ async def update_player_list(channel):
 
     msg = await channel.fetch_message(game["message"])
     players_text = "\n".join(
-        [f"- <@{pid}>" if pid > 0 else f"- 👻 FakePlayer{abs(pid)}" for pid in game["players"]]
+        [f"- Player{i+1}" if pid > 0 else f"- 👻 FakePlayer{i+1}" for i, pid in enumerate(game["players"])]
     )
 
     embed = discord.Embed(
@@ -59,10 +60,12 @@ async def update_player_list(channel):
 
 
 
+
+
 @bot.command(name="cg")
 async def create_game(ctx):
     GAMES[ctx.channel.id] = {
-        "players": set([ctx.author.id]),
+        "players": [ctx.author.id],   # لیست بازیکنان به ترتیب
         "god_id": ctx.author.id,
         "scenario": None,
         "roles": {},
@@ -78,12 +81,11 @@ async def create_game(ctx):
 
     embed = discord.Embed(
         title="🎮 بازی جدید ساخته شد",
-        description=f"👑 گاد: <@{ctx.author.id}>\n\nبازیکنان:\n- <@{ctx.author.id}>",
+        description=f"👑 گاد: <@{ctx.author.id}>\n\nبازیکنان:\n- Player1",
         color=discord.Color.green()
     )
     msg = await ctx.send(embed=embed, view=JoinAndScenarioView())
     GAMES[ctx.channel.id]["message"] = msg.id
-
 
 
 
@@ -103,7 +105,7 @@ async def add_player(ctx, member: discord.Member):
         await ctx.send(f"⚠️ {member.display_name} قبلاً وارد بازی شده.")
         return
 
-    game["players"].add(member.id)
+    game["players"].append(member.id)
     await ctx.send(f"✅ {member.mention} توسط گاد به بازی اضافه شد.")
     await update_player_list(ctx.channel)
 
@@ -121,8 +123,8 @@ async def add_fake_players(ctx, count: int):
         return
 
     for i in range(count):
-        fake_id = -(len(game["players"]) + i + 1)
-        game["players"].add(fake_id)
+        fake_id = -(len(game["players"]) + 1)
+        game["players"].append(fake_id)
 
     await ctx.send(f"👻 {count} بازیکن فیک اضافه شد.")
     await update_player_list(ctx.channel)
@@ -140,7 +142,7 @@ async def on_interaction(interaction: discord.Interaction):
         if interaction.user.id in game["players"]:
             await interaction.response.send_message("⚠️ شما قبلاً وارد بازی شدی.", ephemeral=True)
             return
-        game["players"].add(interaction.user.id)
+        game["players"].append(interaction.user.id)
         await interaction.response.send_message(f"✅ <@{interaction.user.id}> وارد بازی شد.")
         await update_player_list(interaction.channel)
         return
@@ -164,8 +166,6 @@ async def on_interaction(interaction: discord.Interaction):
 
 
 
-
-
 @bot.command(name="sg")
 async def start_game(ctx):
     game = GAMES.get(ctx.channel.id)
@@ -176,25 +176,24 @@ async def start_game(ctx):
         await ctx.send("❌ هنوز سناریو انتخاب نشده.")
         return
 
-    # گرفتن نقش‌ها بر اساس تعداد بازیکنان
     scenario_roles = SCENARIOS[game["scenario"]].get(str(len(game["players"])))
     if not scenario_roles:
         await ctx.send("⚠️ تعداد بازیکنان با هیچ نسخه‌ای از این سناریو نمی‌خونه.")
         return
 
-    # شماره‌گذاری بازیکنان
     players = list(game["players"])
-    random.shuffle(players)
     numbered = {pid: i+1 for i, pid in enumerate(players)}
     game["numbers"] = numbered
+    
 
-    # تقسیم نقش‌ها
+
     roles = scenario_roles.copy()
     random.shuffle(roles)
     assignments = {}
+
     for pid, role in zip(players, roles):
         assignments[pid] = role
-        if pid > 0:  # بازیکن واقعی
+        if pid > 0:
             member = ctx.guild.get_member(pid)
             try:
                 await member.send(f"🎭 شما Player{numbered[pid]} هستید.\nنقش شما: **{role}**")
@@ -203,7 +202,6 @@ async def start_game(ctx):
 
     game["roles"] = assignments
 
-    # لیست نقش‌ها برای گاد
     role_list = "\n".join(
         [f"🔹 Player{num} → {assignments[pid]}" for pid, num in numbered.items()]
     )
@@ -213,7 +211,6 @@ async def start_game(ctx):
     except:
         await ctx.send("⚠️ نتونستم لیست نقش‌ها رو برای گاد بفرستم (پی‌وی بسته است).")
 
-    # نمایش شماره بازیکنان در کانال
     players_list = "\n".join([f"Player{num}" for _, num in numbered.items()])
     await ctx.send(f"✅ نقش‌ها تقسیم شدند.\n\n👥 بازیکنان:\n{players_list}")
 
@@ -223,11 +220,24 @@ async def start_game(ctx):
 
 
 
+    god_member = ctx.guild.get_member(game["god_id"])
+    try:
+        await god_member.send(f"📋 لیست نقش‌ها:\n\n{role_list}")
+    except:
+        await ctx.send("⚠️ نتونستم لیست نقش‌ها رو برای گاد بفرستم (پی‌وی بسته است).")
 
+    players_list = "\n".join([f"Player{num}" for _, num in numbered.items()])
+    await ctx.send(f"✅ نقش‌ها تقسیم شدند.\n\n👥 بازیکنان:\n{players_list}")
 
 
 # اجرای بات
 bot.run(TOKEN)
+
+
+
+
+
+
 
 
 
